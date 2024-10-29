@@ -89,78 +89,79 @@ public class JetpackItem extends BaseArmorItem implements IColored, DyeableLeath
 	@Override
 	public void onArmorTick(ItemStack stack, Level level, Player player) {
 		var chest = JetpackUtils.getEquippedJetpack(player);
+		if (chest.isEmpty() || chest != stack)
+			return;
+
 		var item = chest.getItem();
 
-		if (!chest.isEmpty() && item instanceof JetpackItem) {
-			if (JetpackUtils.isEngineOn(chest)) {
-				var hover = JetpackUtils.isHovering(chest);
+		if (item instanceof JetpackItem && JetpackUtils.isEngineOn(chest)) {
+			var hover = JetpackUtils.isHovering(chest);
 
-				if (InputHandler.isHoldingUp(player) || hover && !player.onGround()) {
-					var jetpack = JetpackUtils.getJetpack(stack);
+			if (InputHandler.isHoldingUp(player) || hover && !player.onGround()) {
+				var jetpack = JetpackUtils.getJetpack(stack);
 
-					double motionY = player.getDeltaMovement().y();
-					double hoverSpeed = InputHandler.isHoldingDown(player) ? jetpack.speedHoverDescend : jetpack.speedHoverSlow;
-					double currentAccel = jetpack.accelVert * (motionY < 0.3D ? 2.5D : 1.0D);
-					double currentSpeedVertical = jetpack.speedVert * (player.isInWater() ? 0.4D : 1.0D);
+				double motionY = player.getDeltaMovement().y();
+				double hoverSpeed = InputHandler.isHoldingDown(player) ? jetpack.speedHoverDescend : jetpack.speedHoverSlow;
+				double currentAccel = jetpack.accelVert * (motionY < 0.3D ? 2.5D : 1.0D);
+				double currentSpeedVertical = jetpack.speedVert * (player.isInWater() ? 0.4D : 1.0D);
 
-					double usage = player.isSprinting() || InputHandler.isHoldingSprint(player) ? jetpack.usage * jetpack.sprintFuel : jetpack.usage;
+				double usage = player.isSprinting() || InputHandler.isHoldingSprint(player) ? jetpack.usage * jetpack.sprintFuel : jetpack.usage;
 
-					var creative = jetpack.creative;
-					var energy = JetpackUtils.getEnergyStorage(chest);
+				var creative = jetpack.creative;
+				var energy = JetpackUtils.getEnergyStorage(chest);
 
-					if (!player.isCreative() && !creative) {
-						energy.extractEnergy((int) usage, false);
-					}
+				if (!player.isCreative() && !creative) {
+					energy.extractEnergy((int) usage, false);
+				}
 
-					if (hover && player.isFallFlying()) {
-						player.stopFallFlying();
-					}
+				if (hover && player.isFallFlying()) {
+					player.stopFallFlying();
+				}
 
-					if (energy.getEnergyStored() > 0 || player.isCreative() || creative) {
-						double throttle = JetpackUtils.getThrottle(stack);
-						double verticalSprintMulti = motionY >= 0 && InputHandler.isHoldingSprint(player) ? jetpack.sprintSpeedVert : 1.0D;
+				if (energy.getEnergyStored() > 0 || player.isCreative() || creative) {
+					double throttle = JetpackUtils.getThrottle(stack);
+					double verticalSprintMulti = motionY >= 0 && InputHandler.isHoldingSprint(player) ? jetpack.sprintSpeedVert : 1.0D;
 
-						if (InputHandler.isHoldingUp(player)) {
-							if (!hover) {
-								fly(player, Math.min(motionY + currentAccel, currentSpeedVertical) * throttle * verticalSprintMulti);
-							} else {
-								if (InputHandler.isHoldingDown(player)) {
-									fly(player, Math.min(motionY + currentAccel, -jetpack.speedHoverSlow));
-								} else {
-									fly(player, Math.min(motionY + currentAccel, jetpack.speedHoverAscend) * throttle * verticalSprintMulti);
-								}
-							}
+					if (InputHandler.isHoldingUp(player)) {
+						if (!hover) {
+							fly(player, Math.min(motionY + currentAccel, currentSpeedVertical) * throttle * verticalSprintMulti);
 						} else {
-							fly(player, Math.min(motionY + currentAccel, -hoverSpeed));
-						}
-
-						double speedSideways = (player.isCrouching() ? jetpack.speedSide * 0.5F : jetpack.speedSide) * throttle;
-						double speedForward = (player.isSprinting() ? speedSideways * jetpack.sprintSpeed : speedSideways) * throttle;
-
-						if (!player.isFallFlying()) {
-							if (InputHandler.isHoldingForwards(player)) {
-								player.moveRelative(1, new Vec3(0, 0, speedForward));
-							}
-
-							if (InputHandler.isHoldingBackwards(player)) {
-								player.moveRelative(1, new Vec3(0, 0, -speedSideways * 0.8F));
-							}
-
-							if (InputHandler.isHoldingLeft(player)) {
-								player.moveRelative(1, new Vec3(speedSideways, 0, 0));
-							}
-
-							if (InputHandler.isHoldingRight(player)) {
-								player.moveRelative(1, new Vec3(-speedSideways, 0, 0));
+							if (InputHandler.isHoldingDown(player)) {
+								fly(player, Math.min(motionY + currentAccel, -jetpack.speedHoverSlow));
+							} else {
+								fly(player, Math.min(motionY + currentAccel, jetpack.speedHoverAscend) * throttle * verticalSprintMulti);
 							}
 						}
+					} else {
+						fly(player, Math.min(motionY + currentAccel, -hoverSpeed));
+					}
 
-						if (!level.isClientSide()) {
-							player.fallDistance = 0.0F;
+					double speedSideways = (player.isCrouching() ? jetpack.speedSide * 0.5F : jetpack.speedSide) * throttle;
+					double speedForward = (player.isSprinting() ? speedSideways * jetpack.sprintSpeed : speedSideways) * throttle;
 
-							if (player instanceof ServerPlayer) {
-								((ServerPlayer) player).connection.aboveGroundTickCount = 0;
-							}
+					if (!player.isFallFlying()) {
+						if (InputHandler.isHoldingForwards(player)) {
+							player.moveRelative(1, new Vec3(0, 0, speedForward));
+						}
+
+						if (InputHandler.isHoldingBackwards(player)) {
+							player.moveRelative(1, new Vec3(0, 0, -speedSideways * 0.8F));
+						}
+
+						if (InputHandler.isHoldingLeft(player)) {
+							player.moveRelative(1, new Vec3(speedSideways, 0, 0));
+						}
+
+						if (InputHandler.isHoldingRight(player)) {
+							player.moveRelative(1, new Vec3(-speedSideways, 0, 0));
+						}
+					}
+
+					if (!level.isClientSide()) {
+						player.fallDistance = 0.0F;
+
+						if (player instanceof ServerPlayer) {
+							((ServerPlayer) player).connection.aboveGroundTickCount = 0;
 						}
 					}
 				}
